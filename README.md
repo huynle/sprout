@@ -79,4 +79,6 @@ validation all come from that one field list.
 
 ## License
 
-See [LICENSE](LICENSE).
+Sprout is free software under the GNU Affero General Public License v3.0 or later
+([LICENSE](LICENSE)). Contributions need the [Contributor License Agreement](CLA.md); see
+[CONTRIBUTING.md](CONTRIBUTING.md). For other licensing terms, contact the maintainer.
