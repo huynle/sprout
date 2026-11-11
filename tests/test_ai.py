@@ -82,7 +82,7 @@ def test_not_configured(make_app, tmp_path):
 
     a = App(Settings(data_dir=tmp_path / "d2", admins=(ADMIN,), dev_login_email=ADMIN))
     c = client_as(a, ADMIN)
-    c.post("/welcome", data={"csrf": csrf(c, "/welcome"), "name": "F"})
+    c.post("/welcome", data={"csrf": csrf(c, "/welcome"), "name": "F", "agree": "on"})
     assert "isn't set up" in c.get("/ask").text
 
 

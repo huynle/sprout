@@ -1,14 +1,16 @@
-{% extends "base.html" %}{% block title %}Sign in · Sprout{% endblock %}
+{% extends "base.html" %}{% block title %}Sprout{% endblock %}
 {% block body %}
 <section class="hero">
   <h1>Sprout</h1>
-  <p>Worksheets, coloring pages and project ideas for your kids, all in one place.</p>
+  <p>Worksheets made for your child's level, coloring pages, a simple record of what each child did and how it went, and ideas for projects to build together.</p>
+  <p class="muted">Share one family space with your partner, grandparents or tutors.</p>
   {% if dev %}
   <p class="notice">Local development sign-in.</p>
   <a class="button big" href="/dev-login?next={{ next|urlencode }}">Continue</a>
   {% else %}
-  <a class="button big" href="{{ google_url }}">Sign in with Google</a>
+  <a class="button big" href="{{ google_url }}">{{ 'Sign in or sign up with Google' if open_signup else 'Sign in with Google' }}</a>
   {% endif %}
-  <p class="muted small">Invite-only for now: a family owner adds your email first.</p>
+  {% if not open_signup %}<p class="muted small">Invite-only: a family owner adds your email first.</p>{% endif %}
+  <p class="small"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
 </section>
 {% endblock %}

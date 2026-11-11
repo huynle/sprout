@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% block title %}Privacy · Sprout{% endblock %}
+{% block body %}
+<article class="card prose">
+<h1>Privacy policy</h1>
+<p>This Sprout site is run by {{ operator }}.{% if contact %} Questions or requests: <a href="mailto:{{ contact }}">{{ contact }}</a>.{% endif %}</p>
+<h2>What we store</h2>
+<ul>
+  <li><strong>Your account:</strong> the email address Google confirms when you sign in. We don't receive your Google password or contacts.</li>
+  <li><strong>Your family's records:</strong> what you and the people you invite enter: family name, children's first names and birthdays (to show ages), levels, notes, history and feedback, project ideas, requests to the assistant.</li>
+  <li><strong>Files:</strong> worksheets you make and pictures or PDFs you upload, stored as PDFs (uploads are re-encoded and their metadata removed).</li>
+  <li><strong>Security records:</strong> sign-in sessions and an activity log (who did what, when) to keep the service safe.</li>
+</ul>
+<h2>Who can see it</h2>
+<p>Only the members of your family. Owners decide who is invited and can remove people. The site's operator can access the server for maintenance and backups and does not look at family records otherwise.</p>
+<h2>The assistant</h2>
+<p>When you use "Ask for something", your request and the chosen child's first name, age in years and current level are sent to an AI model provider to make the draft. Birthdays and history are never sent.</p>
+<h2>Children</h2>
+<p>Sprout is used by parents and other adults. Children don't have accounts. Please don't upload photos of children or more personal detail than you need.</p>
+<h2>Cookies</h2>
+<p>One cookie keeps you signed in. There are no ads and no tracking.</p>
+<h2>Keeping and deleting data</h2>
+<p>Records are kept until you delete them. An owner can delete the whole family (Family settings → Delete family), which removes its records and files; backups roll over within about 30 days. You can leave a family at any time.</p>
+<h2>Changes</h2>
+<p>If this policy changes, the new version is posted here.</p>
+</article>
+{% endblock %}

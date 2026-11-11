@@ -13,8 +13,9 @@ It works on a phone, tablet or laptop and can be installed as an app from the br
   of a hot air balloon"). An AI model turns it into settings for a built-in worksheet, or draws a
   black-and-white coloring page. Everything is a draft you preview first.
 - **Project ideas**: things to build together (CNC router, laser cutter, printer, other).
-- **Families**: each family's data is separate. Owners add children and invite other adults by
-  Google email. Sign-up is invite-only.
+- **Families**: each family's data is separate and shared by everyone in it. Owners add children and invite
+  a partner or others by Google email. With open sign-up anyone can create their own family; members can
+  leave and owners can delete the family with everything in it.
 
 ## Run it locally
 
@@ -23,7 +24,8 @@ uv sync
 SPROUT_ADMINS=you@example.com DEV_LOGIN_EMAIL=you@example.com uv run sprout serve
 ```
 
-Open http://localhost:8000, continue, create your family, add children. `DEV_LOGIN_EMAIL` skips
+Open http://localhost:8000, continue, create your family, add children. Add `SPROUT_SIGNUP=open
+SPROUT_OPERATOR_NAME=You SPROUT_CONTACT_EMAIL=you@example.com` to let anyone create a family. `DEV_LOGIN_EMAIL` skips
 Google sign-in and only works when `PUBLIC_BASE_URL` is localhost. Add `?as=other@example.com` to
 `/dev-login` to try a second person.
 
@@ -33,7 +35,12 @@ Google sign-in and only works when `PUBLIC_BASE_URL` is localhost. Add `?as=othe
 |---|---|---|
 | `PUBLIC_BASE_URL` | `http://localhost:8000` | Address people use; secure cookies when https |
 | `DATA_DIR` | `data` | SQLite database and files |
-| `SPROUT_ADMINS` | (required) | Comma-separated emails of instance admins (can create families) |
+| `SPROUT_ADMINS` | (required) | Comma-separated emails of instance admins (can always create families; see `/admin`) |
+| `SPROUT_SIGNUP` | `invite` | `open`: anyone who signs in with Google can create one family; `invite`: only invited emails and admins |
+| `SPROUT_OPERATOR_NAME` | | Who runs this site, shown on the privacy and terms pages (required with `open`) |
+| `SPROUT_CONTACT_EMAIL` | | Contact address on the privacy and terms pages (required with `open`) |
+| `SPROUT_FAMILY_QUOTA_MB` | `500` | Storage per family for sheets and uploads |
+| `AI_INSTANCE_DAILY_CAP` | `300` | Assistant requests per day across all families (each family also has 40/day) |
 | `GOOGLE_CLIENT_ID` | | Google OAuth client (web application) |
 | `GOOGLE_CLIENT_SECRET` | | Its secret; redirect URI is `PUBLIC_BASE_URL/auth/callback` |
 | `DEV_LOGIN_EMAIL` | | Local development only: sign in as this email without Google |

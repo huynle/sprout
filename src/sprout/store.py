@@ -22,14 +22,27 @@ class NotFound(LookupError):
     pass
 
 
+class QuotaExceeded(ValueError):
+    pass
+
+
 class Files:
     """Opaque file names under one directory; families never share a name space."""
 
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, quota_bytes: int | None = None):
         self.root = root
+        self.quota = quota_bytes
         root.mkdir(parents=True, exist_ok=True)
 
+    def used(self, family_id: int) -> int:
+        folder = self.root / str(family_id)
+        return sum(p.stat().st_size for p in folder.rglob("*") if p.is_file()) if folder.exists() else 0
+
     def save(self, family_id: int, data: bytes, ext: str) -> str:
+        if self.quota is not None and self.used(family_id) + len(data) > self.quota:
+            raise QuotaExceeded(
+                "Your family's storage is full. Delete the family's old files or ask the operator."
+            )
         name = f"{family_id}/{time.strftime('%Y%m')}/{secrets.token_hex(12)}.{ext}"
         p = self.root / name
         p.parent.mkdir(parents=True, exist_ok=True)

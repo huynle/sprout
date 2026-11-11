@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block title %}Terms · Sprout{% endblock %}
+{% block body %}
+<article class="card prose">
+<h1>Terms of use</h1>
+<p>This Sprout site is run by {{ operator }}{% if contact %} (<a href="mailto:{{ contact }}">{{ contact }}</a>){% endif %}. By creating or joining a family you agree to these terms.</p>
+<ul>
+  <li><strong>It's for families.</strong> Use it to make learning material for children you care for. Adults only; children don't get accounts.</li>
+  <li><strong>Your content stays yours.</strong> You're responsible for what you upload and must have the right to use it. Many coloring pages and characters are only for personal use; respect their creators' terms.</li>
+  <li><strong>Fair use.</strong> Each family has storage ({{ quota_mb }} MB) and daily assistant limits. Don't try to access other families' data or disrupt the service.</li>
+  <li><strong>AI drafts.</strong> The assistant can make mistakes. Check every draft before you print it.</li>
+  <li><strong>Projects with tools.</strong> Project ideas are suggestions. You're responsible for safety: sand edges, avoid small parts for children under 3, use non-toxic finishes.</li>
+  <li><strong>No warranty.</strong> The service is provided as is and may change or stop. Keep copies of anything important.</li>
+  <li><strong>Ending.</strong> You can leave or delete your family at any time. Accounts that break these terms may be removed.</li>
+</ul>
+<p class="muted small">Sprout is free software under the GNU AGPL v3; the source code is at <a href="https://github.com/huynle/sprout">github.com/huynle/sprout</a>.</p>
+</article>
+{% endblock %}

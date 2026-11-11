@@ -70,3 +70,6 @@ details>summary{cursor:pointer;font-weight:700}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line)}
 .tags{display:flex;flex-wrap:wrap;gap:8px}
 .busy button[type=submit],.busy button:not([type]){opacity:.6;pointer-events:none}
+.foot{max-width:980px;margin:0 auto;padding:8px 16px 24px;text-align:center}
+.prose h2{margin-top:1.4em}.prose li{margin:.4em 0}
+@media (max-width:640px){.foot{padding-bottom:96px}}

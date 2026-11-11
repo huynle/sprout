@@ -122,11 +122,12 @@ class Assistant:
         raise ValueError("image model returned no image data")
 
     def over_limit(self, store: Store) -> bool:
+        since = time.time() - 86400
         (n,) = store.db.one(
-            "SELECT COUNT(*) FROM requests WHERE family_id=? AND created_at>?",
-            (store.fid, time.time() - 86400),
+            "SELECT COUNT(*) FROM requests WHERE family_id=? AND created_at>?", (store.fid, since)
         )
-        return n > DAILY_LIMIT
+        (total,) = store.db.one("SELECT COUNT(*) FROM requests WHERE created_at>?", (since,))
+        return n > DAILY_LIMIT or total > self.s.ai_instance_daily_cap
 
     async def fulfil(
         self, store: Store, rid: int, text: str, child: dict | None, actor: str

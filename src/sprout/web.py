@@ -22,7 +22,7 @@ from sprout import ai, auth, coloring, sheets
 from sprout.config import Settings
 from sprout.db import Database
 from sprout.families import Families, FamilyError
-from sprout.store import IDEA_STATUS, MACHINES, RATINGS, Files, NotFound, Store
+from sprout.store import IDEA_STATUS, MACHINES, RATINGS, Files, NotFound, QuotaExceeded, Store
 
 log = logging.getLogger(__name__)
 HERE = Path(__file__).parent
@@ -30,8 +30,18 @@ CSP = (
     "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
     "frame-ancestors 'none'; form-action 'self' https://accounts.google.com; base-uri 'none'; object-src 'none'"
 )
-PUBLIC = {"/login", "/auth/callback", "/dev-login", "/healthz", "/sw.js", "/manifest.webmanifest", "/offline"}
-NO_FAMILY_OK = {"/welcome", "/logout", "/admin", "/family/switch"}
+PUBLIC = {
+    "/login",
+    "/auth/callback",
+    "/dev-login",
+    "/healthz",
+    "/sw.js",
+    "/manifest.webmanifest",
+    "/offline",
+    "/privacy",
+    "/terms",
+}
+NO_FAMILY_OK = {"/welcome", "/logout", "/admin", "/family/switch", "/privacy", "/terms"}
 
 
 def _int(v) -> int | None:
@@ -46,7 +56,7 @@ class App:
         settings.check()
         self.s = settings
         self.db = Database(settings.data_dir / "sprout.db")
-        self.files = Files(settings.data_dir / "files")
+        self.files = Files(settings.data_dir / "files", settings.family_quota_bytes)
         self.families = Families(self.db)
         self.sessions = auth.Sessions(self.db, settings.session_idle_seconds, settings.session_max_seconds)
         self.http = http or httpx.AsyncClient()
@@ -124,12 +134,12 @@ class App:
     async def login(self, request: Request) -> Response:
         rt = auth.safe_return_to(request.query_params.get("next"))
         if self.s.dev_login_email:
-            return self.page(request, "login.html", dev=True, next=rt)
+            return self.page(request, "login.html", dev=True, next=rt, open_signup=self.s.open_signup)
         flow = self.sessions.start_login(rt)
         if not flow:
             raise HTTPException(429, "Too many sign-ins in progress. Try again in a few minutes.")
         url = auth.authorization_url(self.s.google_client_id, self.s.public_base_url + "/auth/callback", flow)
-        return self.page(request, "login.html", dev=False, google_url=url)
+        return self.page(request, "login.html", dev=False, google_url=url, open_signup=self.s.open_signup)
 
     async def callback(self, request: Request) -> Response:
         flow = self.sessions.take_login(request.query_params.get("state"))
@@ -159,7 +169,7 @@ class App:
     def _signed_in(self, request: Request, email: str, return_to: str) -> Response:
         self.families.accept_pending(email)
         fams = self.families.of(email)
-        if not fams and not self.s.is_admin(email):
+        if not fams and not (self.s.is_admin(email) or self.s.open_signup):
             self.db.audit(None, email, "login.refused")
             return self.message(
                 request,
@@ -195,22 +205,37 @@ class App:
         r.delete_cookie(self.cookie, path="/")
         return r
 
+    def can_create_family(self, email: str) -> bool:
+        """Admins always; with open sign-up, anyone who doesn't already own a family."""
+        return self.s.is_admin(email) or (self.s.open_signup and self.families.owned_count(email) == 0)
+
     async def welcome(self, request: Request) -> Response:
-        """Signed in but no family: admins create one; everyone else waits for an invite."""
+        """Signed in but no family: create one (when allowed) or wait for an invite."""
         error = None
         if request.method == "POST":
             f = await self.form(request)
-            if not self.s.is_admin(self.actor(request)):
-                raise HTTPException(403, "Only instance admins can create families.")
+            if not self.can_create_family(self.actor(request)):
+                raise HTTPException(
+                    403, "You can't create another family. Ask an owner to invite you instead."
+                )
+            if f.get("agree") != "on":
+                return self.page(
+                    request,
+                    "welcome.html",
+                    error="Please accept the terms and privacy policy.",
+                    can_create=True,
+                )
             try:
                 fid = self.families.create(str(f.get("name", "")), self.actor(request), self.actor(request))
                 self.sessions.set_family(request.state.session, fid)
                 return RedirectResponse("/family", 303)
             except FamilyError as e:
                 error = str(e)
-        if request.state.family:
+        if request.state.family and request.query_params.get("new") is None:
             return RedirectResponse("/", 303)
-        return self.page(request, "welcome.html", error=error)
+        return self.page(
+            request, "welcome.html", error=error, can_create=self.can_create_family(self.actor(request))
+        )
 
     async def switch_family(self, request: Request) -> Response:
         f = await self.form(request)
@@ -225,8 +250,22 @@ class App:
         fid, error = request.state.family["id"], None
         if request.method == "POST":
             f = await self.form(request)
-            self.need_owner(request)
             action = f.get("action")
+            if action == "leave":
+                try:
+                    self.families.leave(fid, self.actor(request))
+                except FamilyError as e:
+                    return self.message(request, 400, "Can't leave yet", str(e), "/family")
+                return RedirectResponse("/", 303)
+            self.need_owner(request)
+            if action == "delete_family":
+                if str(f.get("confirm", "")).strip() != request.state.family["name"]:
+                    return self.message(
+                        request, 400, "Not deleted", "Type the family's name exactly to confirm.", "/family"
+                    )
+                self.families.delete(fid, self.actor(request), self.files.root)
+                r = RedirectResponse("/welcome", 303)
+                return r
             try:
                 if action == "rename":
                     self.families.rename(fid, str(f.get("name", "")), self.actor(request))
@@ -536,6 +575,16 @@ class App:
                 error = str(e)
         return self.page(request, "ideas.html", ideas=st.ideas(), error=error)
 
+    async def policy(self, request: Request) -> Response:
+        name = request.url.path.strip("/")
+        return self.page(
+            request,
+            f"{name}.html",
+            operator=self.s.operator_name or "the operator of this site",
+            contact=self.s.contact_email,
+            quota_mb=self.s.family_quota_bytes // (1024 * 1024),
+        )
+
     # -- plumbing ------------------------------------------------------------------
     async def offline(self, request: Request) -> Response:
         return self.message(request, 200, "Offline", "You're offline. Connect and try again.")
@@ -574,6 +623,8 @@ class App:
                 return await handler(request)
             except NotFound:
                 raise HTTPException(404, "That isn't here (or belongs to another family).") from None
+            except QuotaExceeded as e:
+                raise HTTPException(413, str(e)) from None
 
         return run
 
@@ -600,6 +651,8 @@ class App:
             r("/coloring/{pid:int}", self.coloring_one, GP),
             r("/coloring/{pid:int}.{fmt}", self.coloring_file),
             r("/ask", self.ask, GP),
+            r("/privacy", self.policy),
+            r("/terms", self.policy),
             r("/ideas", self.ideas, GP),
             r("/offline", self.offline),
             Route("/healthz", self.healthz),

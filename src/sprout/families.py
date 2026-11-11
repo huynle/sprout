@@ -7,7 +7,9 @@ invite (accepted automatically, since Google verified the address), or is an ins
 from __future__ import annotations
 
 import re
+import shutil
 import time
+from pathlib import Path
 
 from sprout.db import Database
 
@@ -133,3 +135,19 @@ class Families:
             self.db.audit(r["family_id"], e, "invite.accept")
             joined.append(r["family_id"])
         return joined
+
+    def owned_count(self, email: str) -> int:
+        (n,) = self.db.one("SELECT COUNT(*) FROM members WHERE email=? AND role='owner'", (email.lower(),))
+        return n
+
+    def leave(self, fid: int, email: str) -> None:
+        self.remove_member(fid, email, email)
+
+    def delete(self, fid: int, actor: str, files_root: Path) -> None:
+        """Delete a family and everything in it: rows (ON DELETE CASCADE) and its files folder."""
+        self.db.audit(None, actor, "family.delete", deleted_family=fid)
+        self.db.run("UPDATE web_sessions SET family_id=NULL WHERE family_id=?", (fid,))
+        self.db.run("DELETE FROM families WHERE id=?", (fid,))
+        folder = (files_root / str(fid)).resolve()
+        if folder.parent == files_root.resolve() and folder.exists():
+            shutil.rmtree(folder)

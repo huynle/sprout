@@ -97,7 +97,7 @@ def csrf(client: TestClient, path: str = "/") -> str:
 def family(app):
     """An admin-created family with two children; returns (client_for_owner, family_id, child_ids)."""
     c = client_as(app, ADMIN)
-    r = c.post("/welcome", data={"csrf": csrf(c, "/welcome"), "name": "Example Family"})
+    r = c.post("/welcome", data={"csrf": csrf(c, "/welcome"), "name": "Example Family", "agree": "on"})
     assert r.status_code == 303
     fid = app.families.of(ADMIN)[0]["id"]
     t = csrf(c, "/family")

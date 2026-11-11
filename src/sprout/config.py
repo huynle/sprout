@@ -27,6 +27,11 @@ class Settings:
     llm_key: str = field(default="", repr=False)
     llm_model: str = ""
     image_model: str = ""
+    signup: str = "invite"  # invite | open
+    operator_name: str = ""
+    contact_email: str = ""
+    family_quota_bytes: int = 500 * 1024 * 1024
+    ai_instance_daily_cap: int = 300
     session_idle_seconds: int = 14 * 24 * 3600
     session_max_seconds: int = 90 * 24 * 3600
     max_upload_bytes: int = 20 * 1024 * 1024
@@ -47,9 +52,17 @@ class Settings:
     def is_admin(self, email: str | None) -> bool:
         return (email or "").lower() in self.admins
 
+    @property
+    def open_signup(self) -> bool:
+        return self.signup == "open"
+
     def check(self) -> None:
         if not self.admins:
             raise RuntimeError("SPROUT_ADMINS must list at least one email (instance administrators)")
+        if self.signup not in ("invite", "open"):
+            raise RuntimeError("SPROUT_SIGNUP must be 'invite' or 'open'")
+        if self.open_signup and not (self.operator_name and self.contact_email):
+            raise RuntimeError("SPROUT_OPERATOR_NAME and SPROUT_CONTACT_EMAIL are required with open sign-up")
         if self.dev_login_email and not self.is_local:
             raise RuntimeError("DEV_LOGIN_EMAIL is only allowed when PUBLIC_BASE_URL is localhost")
         if not self.dev_login_email and not (self.google_client_id and self.google_client_secret):
@@ -72,6 +85,11 @@ ENV = {
     "LLM_KEY": "llm_key",
     "LLM_MODEL": "llm_model",
     "IMAGE_MODEL": "image_model",
+    "SPROUT_SIGNUP": "signup",
+    "SPROUT_OPERATOR_NAME": "operator_name",
+    "SPROUT_CONTACT_EMAIL": "contact_email",
+    "SPROUT_FAMILY_QUOTA_MB": "family_quota_bytes",
+    "AI_INSTANCE_DAILY_CAP": "ai_instance_daily_cap",
 }
 
 
@@ -88,8 +106,12 @@ def from_env(env: dict[str, str] | None = None) -> Settings:
             kw[attr] = Path(v)
         elif attr in ("public_base_url", "printer_url", "llm_url"):
             kw[attr] = v.rstrip("/")
-        elif attr == "dev_login_email":
+        elif attr in ("dev_login_email", "signup"):
             kw[attr] = v.strip().lower()
+        elif attr == "family_quota_bytes":
+            kw[attr] = int(v) * 1024 * 1024
+        elif attr == "ai_instance_daily_cap":
+            kw[attr] = int(v)
         else:
             kw[attr] = v
     return Settings(**kw)

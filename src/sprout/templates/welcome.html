@@ -2,15 +2,18 @@
 {% block body %}
 <section class="card narrow">
   <h1>Welcome to Sprout</h1>
-  {% if is_admin %}
-  <p>Create your family to get started. You'll add your children and invite others next.</p>
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  {% if can_create %}
+  <p>Create your family space. Next you'll add your children and can invite your partner or others to share it.</p>
   <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}">
     <label>Family name <input name="name" required maxlength="80" placeholder="The Smiths"></label>
+    <label class="check"><input type="checkbox" name="agree" required> <span>I agree to the <a href="/terms" target="_blank">terms</a> and <a href="/privacy" target="_blank">privacy policy</a>.</span></label>
     <button class="big">Create family</button>
   </form>
+  <p class="muted small">Joining someone else's family instead? Ask them to invite {{ me }} under Family settings, then sign in again.</p>
   {% else %}
-  <p>You're signed in as {{ me }}, but you aren't part of a family yet. Ask a family owner to invite this email, then sign in again.</p>
+  <p>You're signed in as {{ me }}{% if my_families %}, and you already have a family{% endif %}. To join another family, ask one of its owners to invite this email, then sign in again.</p>
+  {% if my_families %}<a class="button" href="/">Go to my family</a>{% endif %}
   {% endif %}
 </section>
 {% endblock %}
