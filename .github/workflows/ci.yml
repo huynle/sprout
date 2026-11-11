@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: lint + tests
+    runs-on: ${{ vars.CI_RUNNER && fromJSON(vars.CI_RUNNER) || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest -q
+
+  image:
+    name: container image smoke test
+    runs-on: ${{ vars.CI_RUNNER && fromJSON(vars.CI_RUNNER) || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: sprout:ci
+      - name: smoke test /healthz and sign-in redirect (read-only root, non-root)
+        run: |
+          name="sprout-ci-${{ github.run_id }}-${{ github.run_attempt }}"
+          trap 'docker logs "$name" || true; docker rm -f "$name" >/dev/null 2>&1 || true' EXIT
+          port="$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
+          docker run -d --rm --name "$name" --read-only --tmpfs /tmp -v sprout-ci-data:/data \
+            -p "127.0.0.1:${port}:8000" \
+            -e SPROUT_ADMINS=ci@example.com \
+            -e GOOGLE_CLIENT_ID=ci-client.apps.googleusercontent.com \
+            -e GOOGLE_CLIENT_SECRET=ci-secret \
+            -e PUBLIC_BASE_URL="http://localhost:${port}" \
+            sprout:ci
+          for _ in $(seq 1 30); do
+            if curl -fsS "http://localhost:${port}/healthz"; then ok=1; break; fi
+            sleep 1
+          done
+          test "${ok:-0}" = 1
+          code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:${port}/")
+          test "$code" = 303
+          curl -fsS "http://localhost:${port}/login" | grep -q accounts.google.com
+          test "$(docker exec "$name" id -u)" = 10001
+
+  release:
+    name: Publish immutable container
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, image]
+    permissions:
+      contents: read
+      packages: write
+    uses: huynle/.github/.github/workflows/container-release.yml@v1
+    with:
+      image: ghcr.io/huynle/sprout
+      runner: ${{ vars.CI_RUNNER && 'self-hosted' || 'ubuntu-latest' }}
+      provenance: true
+      sbom: true
