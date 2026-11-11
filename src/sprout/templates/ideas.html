@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% block title %}Project ideas{% endblock %}
+{% block body %}
+<h1>Project ideas</h1>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+{% set names = {} %}{% for c in children %}{% set _ = names.update({c.id: c.name}) %}{% endfor %}
+<section class="ideas">
+{% for i in ideas %}
+  <article class="card idea {{ i.status }}">
+    <h3>{{ i.title }}</h3>
+    <p class="small"><span class="badge">{{ MACHINES[i.machine] }}</span>{% if i.child_id %} <span class="badge">for {{ names.get(i.child_id, '?') }}</span>{% endif %}</p>
+    {% if i.detail %}<p class="muted">{{ i.detail }}</p>{% endif %}
+    <form method="post" class="row"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="status"><input type="hidden" name="idea_id" value="{{ i.id }}">
+      <select name="status" aria-label="Status">{% for k, v in IDEA_STATUS.items() %}<option value="{{ k }}" {% if k == i.status %}selected{% endif %}>{{ v }}</option>{% endfor %}</select><button class="small secondary">Update</button></form>
+  </article>
+{% else %}<p class="muted">No ideas yet.</p>{% endfor %}
+</section>
+<details class="card" open><summary>Add an idea</summary>
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="add">
+    <label>Idea <input name="title" required maxlength="200"></label>
+    <label>Details <textarea name="detail" rows="2" maxlength="4000"></textarea></label>
+    <div class="grid2">
+      <label>Made with <select name="machine">{% for k, v in MACHINES.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
+      <label>For <select name="child_id"><option value="">Anyone</option>{% for c in children %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></label>
+    </div>
+    <button>Add idea</button>
+  </form>
+  <p class="muted small">Wood and laser projects for little ones: sand every edge, no small parts under 3, non-toxic finishes, never laser-cut PVC/vinyl.</p>
+</details>
+{% endblock %}

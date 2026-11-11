@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% block title %}Make a sheet{% endblock %}
+{% block body %}
+<h1>Make a sheet</h1>
+<section class="actions">
+  {% for k in KINDS.values() %}
+  <a class="action card" href="/make/{{ k.id }}{% if child_id %}?child={{ child_id }}{% endif %}"><strong>{{ k.label }}</strong><span class="muted small">{{ k.description }}</span>{% if k.ages %}<span class="badge">ages {{ k.ages }}</span>{% endif %}</a>
+  {% endfor %}
+  <a class="action card" href="/coloring"><strong>Coloring page</strong><span class="muted small">From your library, or upload one.</span></a>
+  <a class="action card" href="/ask{% if child_id %}?child={{ child_id }}{% endif %}"><strong>Something else…</strong><span class="muted small">Describe it and get a draft.</span></a>
+</section>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block title %}{{ kind.label }}{% endblock %}
+{% block body %}
+<h1>{{ kind.label }}</h1><p class="muted">{{ kind.description }}</p>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <label>For <select name="child_id"><option value="">No one in particular</option>{% for c in children %}<option value="{{ c.id }}" {% if c.id|string == child_id|string %}selected{% endif %}>{{ c.name }} ({{ c.age }})</option>{% endfor %}</select></label>
+  {% for f in kind.fields %}
+    {% set v = values.get(f.name, f.default) %}
+    {% if f.type == 'choice' %}
+      <label>{{ f.label }} <select name="{{ f.name }}">{% for val, lab in f.choices %}<option value="{{ val }}" {% if v|string == val|string %}selected{% endif %}>{{ lab }}</option>{% endfor %}</select></label>
+    {% elif f.type == 'bool' %}
+      <label class="check"><input type="checkbox" name="{{ f.name }}" {% if v in (True, 'on', 'true') %}checked{% endif %}> {{ f.label }}</label>
+    {% elif f.type == 'int' %}
+      <label>{{ f.label }} <input type="number" inputmode="numeric" name="{{ f.name }}" value="{{ v if v is not none else '' }}" {% if f.min is not none %}min="{{ f.min }}"{% endif %} {% if f.max is not none %}max="{{ f.max }}"{% endif %}></label>
+    {% else %}
+      <label>{{ f.label }} <input name="{{ f.name }}" value="{{ v or '' }}" maxlength="{{ f.max_len }}" required></label>
+    {% endif %}
+    {% if f.help and f.type != 'int' %}<p class="muted small">{{ f.help }}</p>{% endif %}
+  {% endfor %}
+  <button class="big">Preview</button>
+</form>
+{% endblock %}

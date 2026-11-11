@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% block title %}{{ sheet.title }}{% endblock %}
+{% block body %}
+<h1>{{ sheet.title }}</h1>
+<p class="muted">{% if child %}For <a href="/child/{{ child.id }}">{{ child.name }}</a> · {% endif %}{{ pages }} page{{ '' if pages == 1 else 's' }}{% if sheet.source == 'ai' %} · made by the assistant{% endif %}{% if sheet.params.seed %} · seed {{ sheet.params.seed }} (same seed, same problems){% endif %}</p>
+{% if sheet.status == 'draft' %}
+<div class="notice">This is a draft. Check it, then keep it to add it to {{ child.name if child else 'a child' }}'s history.</div>
+{% endif %}
+<div class="buttons">
+  <a class="button big" href="/sheet/{{ sheet.id }}.pdf" target="_blank" rel="noopener">Open PDF to print</a>
+  {% if sheet.status == 'draft' %}
+  <form method="post" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="keep">
+    {% if not child and children %}<select name="child_id" aria-label="For">{% for c in children %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>{% endif %}
+    <button class="secondary big">Keep</button></form>
+  {% endif %}
+  {% if remake %}<a class="button secondary" href="/make/{{ sheet.kind }}{% if child %}?child={{ child.id }}{% endif %}">Make another</a>{% endif %}
+</div>
+<p class="muted small">On iPhone or iPad: open the PDF, tap Share, then Print.</p>
+<div class="pages">{% for n in range(pages) %}<img src="/sheet/{{ sheet.id }}/page/{{ n }}.png" alt="Page {{ n + 1 }}" {% if n %}loading="lazy"{% endif %}>{% endfor %}</div>
+{% endblock %}

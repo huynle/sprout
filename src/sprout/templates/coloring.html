@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% block title %}Coloring pages{% endblock %}
+{% block body %}
+<h1>Coloring pages</h1>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+{% if tags %}<p class="tags"><a href="/coloring" class="chip {% if not tag %}on{% endif %}">All</a>{% for t in tags %}<a class="chip {% if t == tag %}on{% endif %}" href="/coloring?tag={{ t|urlencode }}">{{ t }}</a>{% endfor %}</p>{% endif %}
+<section class="gallery">
+  {% for p in pages %}<a class="tile card" href="/coloring/{{ p.id }}"><img src="/coloring/{{ p.id }}.png" alt="" loading="lazy"><span>{{ p.title }}</span></a>
+  {% else %}<p class="muted">No coloring pages yet. Add one below, or ask the assistant to draw one.</p>{% endfor %}
+</section>
+<details class="card" {% if not pages %}open{% endif %}><summary>Add a coloring page</summary>
+  <form method="post" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="upload">
+    <label>Picture or PDF <input type="file" name="file" accept="image/png,image/jpeg,image/webp,application/pdf" required></label>
+    <label>Title <input name="title" maxlength="200"></label>
+    <label>Tags <input name="tags" maxlength="200" placeholder="planes, animals"></label>
+    <button>Upload</button>
+  </form>
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="url">
+    <label>…or paste an image/PDF link from {{ hosts }} <input type="url" name="url" required></label>
+    <label>Title <input name="title" maxlength="200"></label>
+    <label>Tags <input name="tags" maxlength="200"></label>
+    <button class="secondary">Import</button>
+  </form>
+  <p class="muted small">For your family's own use. Respect the artist's and site's terms.</p>
+</details>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block title %}Sign in · Sprout{% endblock %}
+{% block body %}
+<section class="hero">
+  <h1>Sprout</h1>
+  <p>Worksheets, coloring pages and project ideas for your kids, all in one place.</p>
+  {% if dev %}
+  <p class="notice">Local development sign-in.</p>
+  <a class="button big" href="/dev-login?next={{ next|urlencode }}">Continue</a>
+  {% else %}
+  <a class="button big" href="{{ google_url }}">Sign in with Google</a>
+  {% endif %}
+  <p class="muted small">Invite-only for now: a family owner adds your email first.</p>
+</section>
+{% endblock %}

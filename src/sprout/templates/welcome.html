@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block title %}Welcome · Sprout{% endblock %}
+{% block body %}
+<section class="card narrow">
+  <h1>Welcome to Sprout</h1>
+  {% if is_admin %}
+  <p>Create your family to get started. You'll add your children and invite others next.</p>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Family name <input name="name" required maxlength="80" placeholder="The Smiths"></label>
+    <button class="big">Create family</button>
+  </form>
+  {% else %}
+  <p>You're signed in as {{ me }}, but you aren't part of a family yet. Ask a family owner to invite this email, then sign in again.</p>
+  {% endif %}
+</section>
+{% endblock %}

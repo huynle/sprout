@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f7d4f">
+<title>{% block title %}Sprout{% endblock %}{% if family %} · {{ family.name }}{% endif %}</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="stylesheet" href="/static/style.css">
+<script src="/static/app.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/"><img src="/static/icon.svg" alt="" width="28" height="28"> Sprout</a>
+  {% if me %}
+  <nav class="main">
+    {% if family %}
+    <a href="/make" {% if path.startswith('/make') or path.startswith('/sheet') %}aria-current="page"{% endif %}>Make</a>
+    <a href="/coloring" {% if path.startswith('/coloring') %}aria-current="page"{% endif %}>Coloring</a>
+    <a href="/ask" {% if path == '/ask' %}aria-current="page"{% endif %}>Ask</a>
+    <a href="/ideas" {% if path == '/ideas' %}aria-current="page"{% endif %}>Ideas</a>
+    {% endif %}
+  </nav>
+  <details class="menu">
+    <summary aria-label="Account menu">☰</summary>
+    <div class="menu-body">
+      <p class="muted small">{{ me }}</p>
+      {% if family %}<a href="/family">Family settings</a>{% endif %}
+      {% if my_families|length > 1 %}
+      <form method="post" action="/family/switch"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <label>Switch family <select name="family_id">{% for f in my_families %}<option value="{{ f.id }}" {% if family and f.id == family.id %}selected{% endif %}>{{ f.name }}</option>{% endfor %}</select></label>
+        <button class="small">Switch</button></form>
+      {% endif %}
+      {% if is_admin %}<a href="/admin">Admin</a>{% endif %}
+      <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="link">Sign out</button></form>
+    </div>
+  </details>
+  {% endif %}
+</header>
+<main>{% block body %}{% endblock %}</main>
+</body>
+</html>

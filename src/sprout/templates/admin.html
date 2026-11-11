@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block title %}Admin{% endblock %}
+{% block body %}
+<h1>Admin</h1>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<section class="card"><h2>Families</h2>
+  <table><thead><tr><th>#</th><th>Name</th><th>Members</th><th>Children</th></tr></thead><tbody>
+  {% for f in families %}<tr><td>{{ f.id }}</td><td>{{ f.name }}</td><td>{{ f.members }}</td><td>{{ f.children }}</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+<section class="card"><h2>New family</h2>
+  <form method="post" class="grid2"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Family name <input name="name" required maxlength="80"></label>
+    <label>Owner's Google email <input type="email" name="owner_email"></label>
+    <label class="check"><input type="checkbox" name="leave"> Don't add me as an owner</label>
+    <button>Create</button>
+  </form>
+</section>
+{% endblock %}

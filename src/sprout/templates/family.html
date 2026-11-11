@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% block title %}Family settings{% endblock %}
+{% block body %}
+<h1>Family settings</h1>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<section class="card" id="children"><h2>Children</h2>
+  <ul class="list">{% for c in children %}<li><a href="/child/{{ c.id }}">{{ c.name }}</a> <span class="muted">{{ c.age }}</span></li>{% else %}<li class="muted">No children yet.</li>{% endfor %}</ul>
+  {% if role == 'owner' %}
+  <form method="post" class="grid2"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="add_child">
+    <label>First name <input name="name" required maxlength="40"></label>
+    <label>Birthday <input type="date" name="born" required></label>
+    <label>Writes their name as <input name="trace_name" maxlength="20" placeholder="e.g. SAM (optional)"></label>
+    <button>Add child</button>
+  </form>
+  <p class="muted small">Birthdays stay in your family's data; Sprout only shows ages.</p>
+  {% endif %}
+</section>
+<section class="card"><h2>People</h2>
+  <ul class="list">{% for m in members %}<li>{{ m.email }} <span class="badge">{{ m.role }}</span>
+    {% if role == 'owner' and m.email != me %}<form method="post" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="remove_member"><input type="hidden" name="email" value="{{ m.email }}"><button class="link danger">Remove</button></form>{% endif %}
+  </li>{% endfor %}
+  {% for i in invites %}<li>{{ i.email }} <span class="badge pending">invited · {{ i.role }}</span>
+    {% if role == 'owner' %}<form method="post" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="cancel_invite"><input type="hidden" name="email" value="{{ i.email }}"><button class="link danger">Cancel</button></form>{% endif %}
+  </li>{% endfor %}</ul>
+  {% if role == 'owner' %}
+  <form method="post" class="grid2"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="invite">
+    <label>Invite by Google email <input type="email" name="email" required></label>
+    <label>Role <select name="role"><option value="member">Member (make, print, log)</option><option value="owner">Owner (also manages family)</option></select></label>
+    <button>Invite</button>
+  </form>
+  <p class="muted small">They sign in with Google at this address and join automatically.</p>
+  {% endif %}
+</section>
+{% if role == 'owner' %}
+<section class="card"><h2>Family name</h2>
+  <form method="post" class="row"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="rename">
+    <input name="name" value="{{ family.name }}" maxlength="80" aria-label="Family name"><button>Save</button></form>
+</section>
+{% endif %}
+{% endblock %}

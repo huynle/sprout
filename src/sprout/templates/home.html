@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block body %}
+<h1 class="greeting">{{ family.name }}</h1>
+{% if not children %}
+<section class="card"><h2>Add your children</h2>
+  <p>Start by adding each child with their first name and birthday. Sprout works out their age every day.</p>
+  {% if role == 'owner' %}<a class="button" href="/family#children">Add a child</a>{% else %}<p class="muted">Ask a family owner to add them.</p>{% endif %}
+</section>
+{% endif %}
+<section class="kids">
+  {% for c in children %}
+  <a class="kid card" href="/child/{{ c.id }}">
+    <span class="avatar" aria-hidden="true">{{ c.name[0] }}</span>
+    <span class="kid-main"><strong>{{ c.name }}</strong><span class="muted">{{ c.age }}</span>
+      {% if c.birthday_in <= 30 %}<span class="badge">🎂 turns {{ c.turning }} in {{ c.birthday_in }} day{{ '' if c.birthday_in == 1 else 's' }}</span>{% endif %}
+      {% if c.last %}<span class="small muted">Last: {{ c.last.title }}</span>{% endif %}
+    </span>
+  </a>
+  {% endfor %}
+</section>
+<section class="actions">
+  <a class="action card" href="/make"><span class="emoji">📝</span><strong>Make a sheet</strong><span class="muted small">Math, name tracing and more</span></a>
+  <a class="action card" href="/coloring"><span class="emoji">🖍️</span><strong>Coloring pages</strong><span class="muted small">{{ stats.coloring }} saved</span></a>
+  <a class="action card" href="/ask"><span class="emoji">✨</span><strong>Ask for something</strong><span class="muted small">{{ 'Describe it, we make a draft' if ai_ready else 'Not set up yet' }}</span></a>
+  <a class="action card" href="/ideas"><span class="emoji">🛠️</span><strong>Project ideas</strong><span class="muted small">{{ stats.ideas }} open</span></a>
+</section>
+{% if requests %}
+<section><h2>Recent requests</h2><ul class="list">
+  {% for r in requests %}<li><span class="status {{ r.status }}">{{ r.status|replace('_',' ') }}</span> {{ r.text }}{% if r.sheet_id %} · <a href="/sheet/{{ r.sheet_id }}">open</a>{% endif %}</li>{% endfor %}
+</ul></section>
+{% endif %}
+{% endblock %}

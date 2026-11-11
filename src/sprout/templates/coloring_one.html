@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block title %}{{ p.title }}{% endblock %}
+{% block body %}
+<h1>{{ p.title }}</h1>
+{% if saved %}<p class="notice">Added to the child's history.</p>{% endif %}
+<div class="buttons">
+  <a class="button big" href="/coloring/{{ p.id }}.pdf" target="_blank" rel="noopener">Open PDF to print</a>
+  {% if children %}<form method="post" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <select name="child_id" aria-label="Log for">{% for c in children %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+    <button class="secondary">Log it for</button></form>{% endif %}
+</div>
+{% if p.tags %}<p class="tags">{% for t in p.tags.split(',') %}<a class="chip" href="/coloring?tag={{ t|urlencode }}">{{ t }}</a>{% endfor %}</p>{% endif %}
+<div class="pages"><img src="/coloring/{{ p.id }}.png" alt="{{ p.title }}"></div>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% block title %}Ask for something{% endblock %}
+{% block body %}
+<h1>Ask for something</h1>
+{% if not ai_ready %}<p class="notice">The assistant isn't set up on this server yet. You can still use <a href="/make">Make a sheet</a>.</p>{% endif %}
+{% if result %}<p class="{{ 'error' if result.status == 'failed' else 'notice' }}">{{ result.message }}</p>{% endif %}
+<form method="post" class="card" data-busy="Making your draft…"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <label>For <select name="child_id"><option value="">No one in particular</option>{% for c in children %}<option value="{{ c.id }}" {% if c.id|string == child_id|string %}selected{% endif %}>{{ c.name }} ({{ c.age }})</option>{% endfor %}</select></label>
+  <label>What would you like? <textarea name="text" rows="3" maxlength="1000" required placeholder="20 easy addition problems with big numbers&#10;A coloring page of an airplane flying over mountains"></textarea></label>
+  <button class="big" {% if not ai_ready %}disabled{% endif %}>Make a draft</button>
+  <p class="muted small">You'll see a preview first. {% if not can_draw %}Pictures aren't set up yet; worksheets are.{% endif %}</p>
+</form>
+{% if requests %}<section><h2>Earlier requests</h2><ul class="list">
+  {% for r in requests %}<li><span class="status {{ r.status }}">{{ r.status|replace('_',' ') }}</span> {{ r.text }}{% if r.sheet_id %} · <a href="/sheet/{{ r.sheet_id }}">open</a>{% elif r.message %} <span class="muted small">— {{ r.message }}</span>{% endif %}</li>{% endfor %}
+</ul></section>{% endif %}
+{% endblock %}
