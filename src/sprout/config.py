@@ -27,6 +27,9 @@ class Settings:
     llm_key: str = field(default="", repr=False)
     llm_model: str = ""
     image_model: str = ""
+    studio_url: str = ""
+    studio_token: str = field(default="", repr=False)
+    studio_family_daily_cap: int = 30
     signup: str = "invite"  # invite | open
     operator_name: str = ""
     contact_email: str = ""
@@ -63,6 +66,8 @@ class Settings:
             raise RuntimeError("SPROUT_SIGNUP must be 'invite' or 'open'")
         if self.open_signup and not (self.operator_name and self.contact_email):
             raise RuntimeError("SPROUT_OPERATOR_NAME and SPROUT_CONTACT_EMAIL are required with open sign-up")
+        if self.studio_url and not self.studio_token:
+            raise RuntimeError("STUDIO_TOKEN is required when STUDIO_URL is set")
         if self.dev_login_email and not self.is_local:
             raise RuntimeError("DEV_LOGIN_EMAIL is only allowed when PUBLIC_BASE_URL is localhost")
         if not self.dev_login_email and not (self.google_client_id and self.google_client_secret):
@@ -85,6 +90,9 @@ ENV = {
     "LLM_KEY": "llm_key",
     "LLM_MODEL": "llm_model",
     "IMAGE_MODEL": "image_model",
+    "STUDIO_URL": "studio_url",
+    "STUDIO_TOKEN": "studio_token",
+    "STUDIO_FAMILY_DAILY_CAP": "studio_family_daily_cap",
     "SPROUT_SIGNUP": "signup",
     "SPROUT_OPERATOR_NAME": "operator_name",
     "SPROUT_CONTACT_EMAIL": "contact_email",
@@ -104,13 +112,13 @@ def from_env(env: dict[str, str] | None = None) -> Settings:
             kw[attr] = _emails(v)
         elif attr == "data_dir":
             kw[attr] = Path(v)
-        elif attr in ("public_base_url", "printer_url", "llm_url"):
+        elif attr in ("public_base_url", "printer_url", "llm_url", "studio_url"):
             kw[attr] = v.rstrip("/")
         elif attr in ("dev_login_email", "signup"):
             kw[attr] = v.strip().lower()
         elif attr == "family_quota_bytes":
             kw[attr] = int(v) * 1024 * 1024
-        elif attr == "ai_instance_daily_cap":
+        elif attr in ("ai_instance_daily_cap", "studio_family_daily_cap"):
             kw[attr] = int(v)
         else:
             kw[attr] = v

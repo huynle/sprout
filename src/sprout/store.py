@@ -203,6 +203,17 @@ class Store:
         self.audit(actor, "sheet.add", id=sid, kind=kind, child=cid, source=source)
         return sid
 
+    def sheets_since(self, kinds: tuple[str, ...], since: float) -> int:
+        """How many sheets of these kinds this family made since ``since`` (daily caps)."""
+        if not kinds:
+            return 0
+        marks = ",".join("?" * len(kinds))
+        (n,) = self.db.one(
+            f"SELECT COUNT(*) FROM sheets WHERE family_id=? AND created_at>? AND kind IN ({marks})",
+            (self.fid, since, *kinds),
+        )
+        return n
+
     def sheet(self, sid: int | str) -> dict:
         try:
             r = self.db.one("SELECT * FROM sheets WHERE id=? AND family_id=?", (int(sid), self.fid))

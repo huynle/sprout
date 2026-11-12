@@ -18,7 +18,7 @@ from starlette.responses import FileResponse, HTMLResponse, RedirectResponse, Re
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
-from sprout import ai, auth, coloring, sheets
+from sprout import ai, auth, coloring, sheets, studio
 from sprout.config import Settings
 from sprout.db import Database
 from sprout.families import Families, FamilyError
@@ -60,13 +60,13 @@ class App:
         self.families = Families(self.db)
         self.sessions = auth.Sessions(self.db, settings.session_idle_seconds, settings.session_max_seconds)
         self.http = http or httpx.AsyncClient()
-        self.ai = ai.Assistant(settings, self.http)
+        self.studio = studio.Studio(settings.studio_url, settings.studio_token, self.http)
+        self.kinds = sheets.available(self.studio)
+        self.ai = ai.Assistant(settings, self.http, self.studio)
         self.env = Environment(
             loader=FileSystemLoader(HERE / "templates"), autoescape=select_autoescape(["html"])
         )
-        self.env.globals.update(
-            RATINGS=RATINGS, MACHINES=MACHINES, IDEA_STATUS=IDEA_STATUS, KINDS=sheets.KINDS
-        )
+        self.env.globals.update(RATINGS=RATINGS, MACHINES=MACHINES, IDEA_STATUS=IDEA_STATUS, KINDS=self.kinds)
         self.cookie = "__Host-sprout" if settings.secure_cookies else "sprout_session"
 
     # -- helpers -------------------------------------------------------------------
@@ -374,7 +374,7 @@ class App:
         return self.page(request, "make.html", child_id=request.query_params.get("child", ""))
 
     async def make_kind(self, request: Request) -> Response:
-        kind = sheets.KINDS.get(request.path_params["kind"])
+        kind = self.kinds.get(request.path_params["kind"])
         if not kind:
             raise HTTPException(404, "Unknown worksheet")
         st, error, values = self.store(request), None, {}
@@ -389,7 +389,14 @@ class App:
                     values[fl.name] = False
             try:
                 params = kind.validate(values)
-                title, pdf = kind.render(params)
+                title, pdf = await sheets.make(
+                    kind,
+                    params,
+                    studio=self.studio,
+                    child=child,
+                    renders_today=st.sheets_since(sheets.STUDIO_KINDS, time.time() - 86400),
+                    daily_cap=self.s.studio_family_daily_cap,
+                )
             except sheets.InvalidParams as e:
                 error = str(e)
             else:
@@ -429,7 +436,7 @@ class App:
             sheet=s,
             pages=sheets.page_count(pdf),
             child=st.child(s["child_id"]) if s["child_id"] else None,
-            remake=s["kind"] in sheets.KINDS,
+            remake=s["kind"] in self.kinds,
             from_ask=request.query_params.get("from") == "ask",
         )
 

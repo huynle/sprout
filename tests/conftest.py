@@ -20,6 +20,7 @@ class FakeUpstream:
         self.chat_reply: dict | str = {"action": "cannot", "message": "nope"}
         self.image_png = None
         self.files: dict[str, tuple[int, bytes]] = {}
+        self.studio = FakeStudio()
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         self.calls.append(request)
@@ -33,10 +34,88 @@ class FakeUpstream:
             return httpx.Response(
                 200, json={"data": [{"b64_json": base64.b64encode(self.image_png).decode()}]}
             )
+        if url.startswith(FakeStudio.BASE):
+            return self.studio.handle(request)
         if url in self.files:
             status, body = self.files[url]
             return httpx.Response(status, content=body)
         return httpx.Response(404)
+
+
+def letter_pdf(pages: int = 2) -> bytes:
+    import io
+
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=letter)
+    for i in range(pages):
+        c.drawString(72, 700, f"page {i + 1}")
+        c.showPage()
+    c.save()
+    return buf.getvalue()
+
+
+class FakeStudio:
+    """A Streamable HTTP MCP server with html_to_pdf and get_job (JSON and SSE replies)."""
+
+    BASE = "http://studio.test"
+
+    def __init__(self):
+        self.html: list[str] = []
+        self.pending = 0  # how many get_job polls answer "pending" first
+        self.error: str | None = None  # html_to_pdf answers isError with this text
+        self.status = 200
+        self.sse = False
+        self.link = "https://studio.example/a/as_x.123.sig"
+        self.pdf = letter_pdf(2)
+        self.auth: list[str] = []
+
+    def _reply(self, rid, result, headers=None):
+        body = {"jsonrpc": "2.0", "id": rid, "result": result}
+        if self.sse:
+            return httpx.Response(
+                200,
+                text=f"event: message\ndata: {json.dumps(body)}\n\n",
+                headers={"content-type": "text/event-stream", **(headers or {})},
+            )
+        return httpx.Response(200, json=body, headers=headers or {})
+
+    def _done(self):
+        return {"structuredContent": {"status": "done", "asset_id": "as_x", "url": self.link}, "content": []}
+
+    def handle(self, request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if request.method == "GET" and path.startswith("/a/"):
+            return httpx.Response(200, content=self.pdf, headers={"content-type": "application/pdf"})
+        if request.method == "DELETE":
+            return httpx.Response(200)
+        self.auth.append(request.headers.get("authorization", ""))
+        if self.status != 200:
+            return httpx.Response(self.status, json={"error": "invalid_token"})
+        msg = json.loads(request.content)
+        method = msg.get("method")
+        if method == "initialize":
+            return self._reply(msg["id"], {"protocolVersion": "2025-06-18"}, {"mcp-session-id": "s1"})
+        if method == "notifications/initialized":
+            return httpx.Response(202)
+        name, args = msg["params"]["name"], msg["params"]["arguments"]
+        if name == "html_to_pdf":
+            self.html.append(args["html"])
+            if self.error:
+                return self._reply(
+                    msg["id"], {"isError": True, "content": [{"type": "text", "text": self.error}]}
+                )
+            if self.pending:
+                return self._reply(msg["id"], {"structuredContent": {"status": "pending", "job_id": "j1"}})
+            return self._reply(msg["id"], self._done())
+        if name == "get_job":
+            self.pending -= 1
+            if self.pending > 0:
+                return self._reply(msg["id"], {"structuredContent": {"status": "pending", "job_id": "j1"}})
+            return self._reply(msg["id"], self._done())
+        return httpx.Response(400)
 
 
 def png_bytes(w=300, h=400) -> bytes:
