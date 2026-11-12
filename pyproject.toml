@@ -15,6 +15,7 @@ dependencies = [
     "reportlab>=4",
     "pypdfium2>=5",
     "pillow>=11",
+    "pypdf>=5",
 ]
 
 [project.scripts]

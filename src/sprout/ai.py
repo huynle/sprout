@@ -25,6 +25,7 @@ from PIL import Image
 from sprout import coloring, sheets
 from sprout.config import Settings
 from sprout.store import Store
+from sprout.studio import Studio
 
 log = logging.getLogger(__name__)
 DAILY_LIMIT = 40
@@ -49,8 +50,8 @@ COLORING_STYLE = (
 
 
 class Assistant:
-    def __init__(self, settings: Settings, http: httpx.AsyncClient):
-        self.s, self.http = settings, http
+    def __init__(self, settings: Settings, http: httpx.AsyncClient, studio: Studio | None = None):
+        self.s, self.http, self.studio = settings, http, studio
 
     @property
     def ready(self) -> bool:
@@ -63,7 +64,7 @@ class Assistant:
     def _kinds_text(self) -> str:
         return "\n".join(
             f'   - "{k.id}": {k.description} Schema: {json.dumps(k.json_schema())}'
-            for k in sheets.KINDS.values()
+            for k in sheets.available(self.studio).values()
         )
 
     def _child_text(self, child: dict | None) -> str:
@@ -154,11 +155,18 @@ class Assistant:
         action = plan.get("action")
         try:
             if action == "sheet":
-                kind = sheets.KINDS.get(str(plan.get("kind")))
+                kind = sheets.available(self.studio).get(str(plan.get("kind")))
                 if not kind:
                     raise sheets.InvalidParams("unknown kind")
                 params = kind.validate(plan.get("params") or {})
-                title, pdf = kind.render(params)
+                title, pdf = await sheets.make(
+                    kind,
+                    params,
+                    studio=self.studio,
+                    child=child,
+                    renders_today=store.sheets_since(sheets.STUDIO_KINDS, time.time() - 86400),
+                    daily_cap=self.s.studio_family_daily_cap,
+                )
                 sid = store.add_sheet(cid, kind.id, title, params, pdf, actor, status="draft", source="ai")
                 store.finish_request(rid, "done", plan, sid, str(plan.get("note", ""))[:300])
                 return {"status": "done", "sheet_id": sid}

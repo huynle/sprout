@@ -48,9 +48,20 @@ Google sign-in and only works when `PUBLIC_BASE_URL` is localhost. Add `?as=othe
 | `LLM_KEY` | | API key for `LLM_URL` |
 | `LLM_MODEL` | | Chat model that supports JSON output |
 | `IMAGE_MODEL` | | Image model at the same API for coloring pages (optional) |
+| `STUDIO_URL` | | Optional. Base URL of a [Studio](#studio-worksheets-optional) server (e.g. `http://image-mcp.image-mcp.svc` in-cluster); enables the Studio worksheet kinds |
+| `STUDIO_TOKEN` | | Studio personal access token (`imcp_…`); required with `STUDIO_URL` |
+| `STUDIO_FAMILY_DAILY_CAP` | `30` | Studio-rendered sheets per family per day |
 | `PRINTER_URL` | | Reserved for server-side printing (not used yet) |
 | `PRINTER_TOKEN` | | Reserved for server-side printing (not used yet) |
 | `PRINTER_ID` | | Reserved for server-side printing (not used yet) |
+
+## Studio worksheets (optional)
+
+Some worksheet kinds ("Big addition") are laid out in HTML and rendered to PDF by Studio, an MCP
+server with an isolated headless Chromium (`html_to_pdf`). Without `STUDIO_URL` those kinds are
+simply not offered; everything else works. Sprout sends only the generated HTML (numbers and
+options): the child's name is never sent, it is stamped onto page 1 by Sprout after rendering.
+Studio's copy of each PDF expires there on its own; Sprout keeps its own copy like any other sheet.
 
 ## Command line
 
